@@ -51,6 +51,8 @@ cd CYU-E06
 ## Structure du Projet
 
 ```
+
+```bash
 CYU-E06/
 │
 ├── src/                    # Code source
@@ -70,6 +72,8 @@ CYU-E06/
 │
 ├── bin/                    # Classes compilées
 └── manifest.txt            # Fichier manifeste JAR
+```
+
 ```
 
 ## Instructions de Compilation
