@@ -41,7 +41,6 @@ Rechercher des images avec des critères flexibles tels que :
 
 ## Cloner le Dépôt
 
-### Utilisation de HTTPS
 ```bash
 # Cloner le dépôt
 git clone https://github.com/LATRECHE-A/CYU-E06
