@@ -47,12 +47,11 @@ git clone https://github.com/LATRECHE-A/CYU-E06
 
 # Naviguer dans le répertoire du projet
 cd CYU-E06 
-
-## Structure du Projet
-
 ```
 
 ```bash
+## Structure du Projet
+
 CYU-E06/
 │
 ├── src/                    # Code source
@@ -75,7 +74,6 @@ CYU-E06/
 ```
 
 ```
-
 ## Instructions de Compilation
 
 ### Compiler le Projet
