@@ -62,10 +62,79 @@ public class ConsoleInterface {
         }
 
         String[] criteria = java.util.Arrays.copyOfRange(args, 2, args.length);
-        StringBuilder commandBuilder = new StringBuilder("find ").append(directory.toString());
+//        StringBuilder commandBuilder = new StringBuilder("find ").append(directory.toString());
+//
+//        commandBuilder.append(" \\( -iname '*.png' -o -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.webp' \\)");
+//
+//        for (String criterion : criteria) {
+//            if (criterion.startsWith("name=")) {
+//                String namePart = criterion.substring(5).toLowerCase();
+//                commandBuilder.append(" -iname '*").append(namePart).append("*'");
+//            } else if (criterion.startsWith("date=")) {
+//                String yearString = criterion.substring(5);
+//                try {
+//                    int year = Integer.parseInt(yearString);
+//                    commandBuilder.append(" -newermt '").append(year).append("-01-01' ! -newermt '")
+//                        .append(year + 1).append("-01-01'");
+//                } catch (NumberFormatException e) {
+//                    System.out.println("Année invalide : " + yearString);
+//                    return;
+//                }
+//            } else if (criterion.startsWith("dimensions=")) {
+//                String dimensions = criterion.substring(11);
+//                String[] parts = dimensions.split("x");
+//                if (parts.length != 2) {
+//                    System.out.println("Format des dimensions invalide. Utilisez <largeur>x<hauteur>.");
+//                    return;
+//                }
+//
+//                try {
+//                    int width = Integer.parseInt(parts[0]);
+//                    int height = Integer.parseInt(parts[1]);
+//                    commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
+//                        .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
+//                } catch (NumberFormatException e) {
+//                    System.out.println("Dimensions invalides : " + dimensions);
+//                    return;
+//                }
+//            } else {
+//                System.out.println("Critère non reconnu : " + criterion);
+//                return;
+//            }
+//        }
+//
+//        // Execute the Linux command
+//        String command = commandBuilder.toString();
+//        System.out.println("Exécution de la commande : " + command);
+//
+//        ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
+//        processBuilder.redirectErrorStream(true);
+//        Process process = processBuilder.start();
+//
+//        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+//            String line;
+//            boolean hasResults = false;
+//            while ((line = reader.readLine()) != null) {
+//                hasResults = true;
+//                System.out.println(line);
+//            }
+//            if (!hasResults) {
+//                System.out.println("Aucun fichier correspondant aux critères spécifiés.");
+//            }
+//        } catch (IOException e) {
+//            System.out.println("Erreur lors de l'exécution de la commande : " + e.getMessage());
+//        }
+        StringBuilder commandBuilder = new StringBuilder();
+     // Detecting the OS
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            commandBuilder.append("dir /s /b ").append(directory.toString()).append("\\*");
+        } else {
+            commandBuilder.append("find ").append(directory.toString());
+            commandBuilder.append(" \\( -iname '*.png' -o -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.webp' \\)");
+        }
 
-        commandBuilder.append(" \\( -iname '*.png' -o -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.webp' \\)");
-
+        // Process criteria
         for (String criterion : criteria) {
             if (criterion.startsWith("name=")) {
                 String namePart = criterion.substring(5).toLowerCase();
@@ -74,8 +143,12 @@ public class ConsoleInterface {
                 String yearString = criterion.substring(5);
                 try {
                     int year = Integer.parseInt(yearString);
-                    commandBuilder.append(" -newermt '").append(year).append("-01-01' ! -newermt '")
-                        .append(year + 1).append("-01-01'");
+                    if (os.contains("win")) {
+                        commandBuilder.append(" | findstr /i \"").append(year).append("\"");
+                    } else {
+                        commandBuilder.append(" -newermt '").append(year).append("-01-01' ! -newermt '")
+                            .append(year + 1).append("-01-01'");
+                    }
                 } catch (NumberFormatException e) {
                     System.out.println("Année invalide : " + yearString);
                     return;
@@ -91,8 +164,13 @@ public class ConsoleInterface {
                 try {
                     int width = Integer.parseInt(parts[0]);
                     int height = Integer.parseInt(parts[1]);
-                    commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
-                        .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
+                    if (os.contains("win")) {
+                        System.out.println("La vérification des dimensions sur Windows n'est pas implémentée.");
+                        return;
+                    } else {
+                        commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
+                            .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
+                    }
                 } catch (NumberFormatException e) {
                     System.out.println("Dimensions invalides : " + dimensions);
                     return;
@@ -103,11 +181,15 @@ public class ConsoleInterface {
             }
         }
 
-        // Execute the Linux command
+        // Execute the command
         String command = commandBuilder.toString();
         System.out.println("Exécution de la commande : " + command);
 
         ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
+        if (os.contains("win")) {
+            processBuilder = new ProcessBuilder("cmd", "/c", command);
+        }
+
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
 
@@ -124,9 +206,10 @@ public class ConsoleInterface {
         } catch (IOException e) {
             System.out.println("Erreur lors de l'exécution de la commande : " + e.getMessage());
         }
+        
     }
 
-        private static void handleDirectoryMode(String[] args) throws IOException {
+    private static void handleDirectoryMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Spécifiez le dossier et l'option souhaitée (-list, --stat, --compare-snapshot).");
             return;
