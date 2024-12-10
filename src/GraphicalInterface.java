@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-
 public class GraphicalInterface extends JFrame {
     private final Color DARK_BACKGROUND = new Color(26, 26, 26);
     private final Color DARK_COMPONENT = new Color(60, 63, 65);

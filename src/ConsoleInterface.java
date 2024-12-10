@@ -6,9 +6,14 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+/* todo : 
+ * - the search isn't working
+*/
 
 public class ConsoleInterface {
 
@@ -105,7 +110,9 @@ public class ConsoleInterface {
 
         // Execute the Linux command
         String command = commandBuilder.toString();
-        System.out.println("Exécution de la commande : " + command);
+
+        // just for debugging
+        //System.out.println("Exécution de la commande : " + command);
 
         ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
         processBuilder.redirectErrorStream(true);
@@ -293,7 +300,7 @@ public class ConsoleInterface {
         }
 
         // Print deleted files
-        List<Path> deletedFiles = categorizedFiles.get("Deleted");
+        List<Path> deletedFiles = categorizedFiles.getOrDefault("Deleted", Collections.emptyList());
         if (!deletedFiles.isEmpty()) {
             System.out.println("Photos supprimées :");
             deletedFiles.forEach(file -> System.out.println(file));
@@ -302,7 +309,7 @@ public class ConsoleInterface {
         }
 
         // Print modified files
-        List<Path> modifiedFiles = categorizedFiles.get("Modified");
+        List<Path> modifiedFiles = categorizedFiles.getOrDefault("Modified", Collections.emptyList());
         if (!modifiedFiles.isEmpty()) {
             System.out.println("Photos modifiées :");
             modifiedFiles.forEach(file -> System.out.println(file));
@@ -311,7 +318,7 @@ public class ConsoleInterface {
         }
 
         // Print new files
-        List<Path> newFiles = categorizedFiles.get("New");
+        List<Path> newFiles = categorizedFiles.getOrDefault("New", Collections.emptyList());
         if (!newFiles.isEmpty()) {
             System.out.println("Photos nouvelles :");
             newFiles.forEach(file -> System.out.println(file));
