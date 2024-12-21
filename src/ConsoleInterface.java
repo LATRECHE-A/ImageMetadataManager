@@ -2,13 +2,19 @@ package test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.File;
 import java.io.IOException;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+//import test.ImageMetadata;
 
 public class ConsoleInterface {
 
@@ -62,70 +68,11 @@ public class ConsoleInterface {
         }
 
         String[] criteria = java.util.Arrays.copyOfRange(args, 2, args.length);
-//        StringBuilder commandBuilder = new StringBuilder("find ").append(directory.toString());
-//
-//        commandBuilder.append(" \\( -iname '*.png' -o -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.webp' \\)");
-//
-//        for (String criterion : criteria) {
-//            if (criterion.startsWith("name=")) {
-//                String namePart = criterion.substring(5).toLowerCase();
-//                commandBuilder.append(" -iname '*").append(namePart).append("*'");
-//            } else if (criterion.startsWith("date=")) {
-//                String yearString = criterion.substring(5);
-//                try {
-//                    int year = Integer.parseInt(yearString);
-//                    commandBuilder.append(" -newermt '").append(year).append("-01-01' ! -newermt '")
-//                        .append(year + 1).append("-01-01'");
-//                } catch (NumberFormatException e) {
-//                    System.out.println("Année invalide : " + yearString);
-//                    return;
-//                }
-//            } else if (criterion.startsWith("dimensions=")) {
-//                String dimensions = criterion.substring(11);
-//                String[] parts = dimensions.split("x");
-//                if (parts.length != 2) {
-//                    System.out.println("Format des dimensions invalide. Utilisez <largeur>x<hauteur>.");
-//                    return;
-//                }
-//
-//                try {
-//                    int width = Integer.parseInt(parts[0]);
-//                    int height = Integer.parseInt(parts[1]);
-//                    commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
-//                        .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
-//                } catch (NumberFormatException e) {
-//                    System.out.println("Dimensions invalides : " + dimensions);
-//                    return;
-//                }
-//            } else {
-//                System.out.println("Critère non reconnu : " + criterion);
-//                return;
-//            }
-//        }
-//
-//        // Execute the Linux command
-//        String command = commandBuilder.toString();
-//        System.out.println("Exécution de la commande : " + command);
-//
-//        ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
-//        processBuilder.redirectErrorStream(true);
-//        Process process = processBuilder.start();
-//
-//        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-//            String line;
-//            boolean hasResults = false;
-//            while ((line = reader.readLine()) != null) {
-//                hasResults = true;
-//                System.out.println(line);
-//            }
-//            if (!hasResults) {
-//                System.out.println("Aucun fichier correspondant aux critères spécifiés.");
-//            }
-//        } catch (IOException e) {
-//            System.out.println("Erreur lors de l'exécution de la commande : " + e.getMessage());
-//        }
         StringBuilder commandBuilder = new StringBuilder();
-     // Detecting the OS
+        boolean searchByDimensions = false;
+        int targetWidth = 0, targetHeight = 0;
+        
+        // Detecting the OS
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("win")) {
             commandBuilder.append("dir /s /b ").append(directory.toString()).append("\\*");
@@ -154,23 +101,17 @@ public class ConsoleInterface {
                     return;
                 }
             } else if (criterion.startsWith("dimensions=")) {
+            	
+            	searchByDimensions = true;
                 String dimensions = criterion.substring(11);
                 String[] parts = dimensions.split("x");
                 if (parts.length != 2) {
                     System.out.println("Format des dimensions invalide. Utilisez <largeur>x<hauteur>.");
                     return;
                 }
-
                 try {
-                    int width = Integer.parseInt(parts[0]);
-                    int height = Integer.parseInt(parts[1]);
-                    if (os.contains("win")) {
-                        System.out.println("La vérification des dimensions sur Windows n'est pas implémentée.");
-                        return;
-                    } else {
-                        commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
-                            .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
-                    }
+                    targetWidth = Integer.parseInt(parts[0]);
+                    targetHeight = Integer.parseInt(parts[1]);
                 } catch (NumberFormatException e) {
                     System.out.println("Dimensions invalides : " + dimensions);
                     return;
@@ -180,10 +121,48 @@ public class ConsoleInterface {
                 return;
             }
         }
+        
+     // Parcourir les fichiers dans le répertoire
+        File dir = directory.toFile();
+        File[] files = dir.listFiles((d, name) ->
+            name.toLowerCase().endsWith(".png") ||
+            name.toLowerCase().endsWith(".jpg") ||
+            name.toLowerCase().endsWith(".jpeg") ||
+            name.toLowerCase().endsWith(".webp")
+        );
+
+        if (files == null || files.length == 0) {
+            System.out.println("Aucun fichier image trouvé dans le répertoire.");
+            return;
+        }
+
+        // Vérification des dimensions
+        if (searchByDimensions) {
+            System.out.println(">>> Début de la vérification des dimensions <<<");
+            List<String> matchingFiles = new ArrayList<>();
+            for (File file : files) {
+                try {
+                    BufferedImage image = ImageIO.read(file);
+                    if (image != null && image.getWidth() == targetWidth && image.getHeight() == targetHeight) {
+                        matchingFiles.add(file.getAbsolutePath());
+                    }
+                } catch (IOException e) {
+                    System.out.println("Erreur lors de la lecture de l'image : " + file.getName());
+                }
+            }
+            if (!matchingFiles.isEmpty()) {
+                System.out.println("Fichiers correspondant aux dimensions spécifiées :");
+                matchingFiles.forEach(System.out::println);
+            } else {
+                System.out.println("Aucun fichier ne correspond aux dimensions spécifiées.");
+            }
+            System.out.println(">>> Fin des fichiers correspondant <<<");
+            return;
+        }
 
         // Execute the command
         String command = commandBuilder.toString();
-        System.out.println("Exécution de la commande : " + command);
+        //System.out.println("Exécution de la commande : " + command);
 
         ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
         if (os.contains("win")) {
