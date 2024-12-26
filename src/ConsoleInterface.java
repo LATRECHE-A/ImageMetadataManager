@@ -11,9 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/* todo : 
- * - the search isn't working
-*/
 
 public class ConsoleInterface {
 
@@ -67,10 +64,17 @@ public class ConsoleInterface {
         }
 
         String[] criteria = java.util.Arrays.copyOfRange(args, 2, args.length);
-        StringBuilder commandBuilder = new StringBuilder("find ").append(directory.toString());
+        StringBuilder commandBuilder = new StringBuilder();
+        // Detecting the OS
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            commandBuilder.append("dir /s /b ").append(directory.toString()).append("\\*");
+        } else {
+            commandBuilder.append("find ").append(directory.toString());
+            commandBuilder.append(" \\( -iname '*.png' -o -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.webp' \\)");
+        }
 
-        commandBuilder.append(" \\( -iname '*.png' -o -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.webp' \\)");
-
+        // Process criteria
         for (String criterion : criteria) {
             if (criterion.startsWith("name=")) {
                 String namePart = criterion.substring(5).toLowerCase();
@@ -79,8 +83,12 @@ public class ConsoleInterface {
                 String yearString = criterion.substring(5);
                 try {
                     int year = Integer.parseInt(yearString);
-                    commandBuilder.append(" -newermt '").append(year).append("-01-01' ! -newermt '")
-                        .append(year + 1).append("-01-01'");
+                    if (os.contains("win")) {
+                        commandBuilder.append(" | findstr /i \"").append(year).append("\"");
+                    } else {
+                        commandBuilder.append(" -newermt '").append(year).append("-01-01' ! -newermt '")
+                            .append(year + 1).append("-01-01'");
+                    }
                 } catch (NumberFormatException e) {
                     System.out.println("Année invalide : " + yearString);
                     return;
@@ -96,8 +104,13 @@ public class ConsoleInterface {
                 try {
                     int width = Integer.parseInt(parts[0]);
                     int height = Integer.parseInt(parts[1]);
-                    commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
-                        .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
+                    if (os.contains("win")) {
+                        System.out.println("La vérification des dimensions sur Windows n'est pas implémentée.");
+                        return;
+                    } else {
+                        commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
+                            .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
+                    }
                 } catch (NumberFormatException e) {
                     System.out.println("Dimensions invalides : " + dimensions);
                     return;
@@ -108,13 +121,15 @@ public class ConsoleInterface {
             }
         }
 
-        // Execute the Linux command
+        // Execute the command
         String command = commandBuilder.toString();
-
-        // just for debugging
-        //System.out.println("Exécution de la commande : " + command);
+        System.out.println("Exécution de la commande : " + command);
 
         ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
+        if (os.contains("win")) {
+            processBuilder = new ProcessBuilder("cmd", "/c", command);
+        }
+
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
 
@@ -131,9 +146,10 @@ public class ConsoleInterface {
         } catch (IOException e) {
             System.out.println("Erreur lors de l'exécution de la commande : " + e.getMessage());
         }
+
     }
 
-        private static void handleDirectoryMode(String[] args) throws IOException {
+    private static void handleDirectoryMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Spécifiez le dossier et l'option souhaitée (-list, --stat, --compare-snapshot).");
             return;
