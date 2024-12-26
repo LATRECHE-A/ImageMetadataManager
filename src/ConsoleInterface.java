@@ -16,8 +16,29 @@ import java.util.stream.Collectors;
 
 //import test.ImageMetadata;
 
+/**
+ * Cette classe fournit une interface en ligne de commande pour interagir avec des fichiers image.
+ * Elle permet de réaliser des opérations telles que la recherche de fichiers, l'affichage d'informations,
+ * la gestion de répertoires et de snapshots, ainsi que la récupération des métadonnées des fichiers image.
+ * 
+ * * Les options disponibles sont les suivantes :
+ * - Liste les fichiers d'un répertoire.
+ * - Affiche des statistiques sur un répertoire ou un fichier.
+ * - Sauvegarde l'état d'un répertoire (snapshot).
+ * - Compare l'état actuel d'un répertoire avec un snapshot sauvegardé.
+ * - Recherche des fichiers image dans un répertoire selon des critères (nom, date, dimensions).
+ * 
+ * @author DIALLO
+ * @version 1.0
+ */
 public class ConsoleInterface {
 
+	/**
+     * Point d'entrée principal de l'application en ligne de commande.
+     * Selon les arguments fournis, cette méthode sélectionne l'option à exécuter.
+     * 
+     * @param args Les arguments passés en ligne de commande.
+     */
     public static void start(String[] args) {
         if (args.length == 0 || args[0].equals("-h") || args[0].equals("--help")) {
             printHelp();
@@ -51,6 +72,12 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+     * Gère le mode de recherche dans un répertoire selon des critères spécifiques (nom, date, dimensions).
+     * 
+     * @param args Les arguments en ligne de commande, dont le répertoire et les critères de recherche.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de la recherche.
+     */
     private static void handleSearchMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Utilisation : --search <directory> <criteria>");
@@ -188,6 +215,12 @@ public class ConsoleInterface {
         
     }
 
+    /**
+     * Gère le mode répertoire, qui permet de lister les fichiers, afficher des statistiques et comparer avec un snapshot.
+     * 
+     * @param args Les arguments en ligne de commande, dont le répertoire et l'option de mode répertoire.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de l'exécution.
+     */
     private static void handleDirectoryMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Spécifiez le dossier et l'option souhaitée (-list, --stat, --compare-snapshot).");
@@ -254,7 +287,7 @@ public class ConsoleInterface {
 
                 System.out.println("Extensions de fichiers trouvées : " + String.join(", ", analyzer.getFileExtensions()));
                 System.out.println("Nombre de fichiers vides : " + analyzer.getEmptyFileCount());
-                System.out.println("Taille totale (y compris sous-dossiers) : " + analyzer.getTotalDirectorySize() + " octets");
+                System.out.println("Taille totale (y compris sous-dossiers) : " + analyzer.getTotalFileSize() + " octets");
                 break;
             case "--compare-snapshot":
                 handleCompareSnapshotMode(args, directory);
@@ -265,6 +298,12 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+    * Gère le mode fichier, qui permet d'afficher des statistiques ou des métadonnées d'un fichier image spécifique.
+    * 
+    * @param args Les arguments en ligne de commande, dont le chemin du fichier et l'option du mode fichier.
+    * @throws IOException Si une erreur d'entrée/sortie se produit lors de l'exécution.
+    */
     private static void handleFileMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Spécifiez le fichier et l'option souhaitée (--stat ,-i ,--info).");
@@ -322,6 +361,12 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+     * Capture l'état actuel d'un répertoire, en sauvegardant un snapshot des fichiers présents.
+     * 
+     * @param args Les arguments en ligne de commande, spécifiant le répertoire à capturer.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de la sauvegarde du snapshot.
+     */
     private static void handleSnapshotMode(String[] args) throws IOException {
         if (args.length < 2) {
             System.out.println("Spécifiez le dossier à capturer.");
@@ -342,6 +387,13 @@ public class ConsoleInterface {
         System.out.println("Snapshot enregistré pour le dossier : " + directory.getFileName());
     }
 
+    /**
+     * Compare l'état actuel d'un répertoire avec un snapshot sauvegardé, en affichant les fichiers ajoutés, modifiés ou supprimés.
+     * 
+     * @param args Les arguments en ligne de commande, dont le répertoire à comparer avec un snapshot.
+     * @param directory Le répertoire à analyser.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de la comparaison des snapshots.
+     */
     private static void handleCompareSnapshotMode(String[] args, Path directory) throws IOException {
         DirectoryAnalyzer analyzer = new DirectoryAnalyzer(directory);
         List<ImageFile> currentImageFiles = analyzer.listImageFiles();
@@ -382,6 +434,10 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+     * Affiche l'aide de l'application en ligne de commande.
+     * Cette méthode présente les options disponibles et leur utilisation.
+     */
     private static void printHelp() {
         System.out.println("Usage : java -jar ImageMetadataManager.jar cli <options>");
         System.out.println("-d(, --directory) <directory> --list : Liste les fichiers images du dossier");

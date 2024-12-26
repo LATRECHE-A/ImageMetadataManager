@@ -9,18 +9,56 @@ import com.drew.metadata.exif.ExifThumbnailDirectory;
 import com.drew.metadata.MetadataException;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.lang.GeoLocation;
-import com.drew.metadata.exif.ExifThumbnailDirectory;
 
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * La classe ExifMetadata étend {@link ImageMetadata} pour inclure les métadonnées EXIF spécifiques
+ * des fichiers image. Elle permet d'extraire des informations détaillées telles que les dimensions,
+ * la résolution, le titre, la description, les coordonnées GPS, et la présence d'une miniature.
+ *
+ * Cette classe s'appuie sur la bibliothèque "Metadata Extractor" pour lire les métadonnées EXIF.
+ * 
+ * @author DIALLO
+ * @version 1.0
+ * @see ImageMetadata
+ * @see <a href="https://github.com/drewnoakes/metadata-extractor">Metadata Extractor</a>
+ */
 public class ExifMetadata extends ImageMetadata {
 
-    // Constructeur
+    /**
+     * Constructeur de la classe ExifMetadata.
+	 *
+	 * @param width la largeur de l'image en pixels
+	 * @param height la hauteur de l'image en pixels
+	 * @param dpi la résolution de l'image en DPI (points par pouce)
+	 * @param title le titre de l'image, s'il est défini dans les métadonnées
+	 * @param description une description textuelle de l'image, s'il est définie
+	 * @param gps les coordonnées GPS sous forme de chaîne, ou "N/A" si non disponibles
+	 * @param hasThumbnail indique si une miniature est présente dans les métadonnées
+	 * 
+	 * @see test.ImageMetadata#ImageMetadata(int, int, int, String, String, String, boolean)
+     */
     public ExifMetadata(int width, int height, int dpi, String title, String description, String gps, boolean hasThumbnail) {
         super(width, height, dpi, title, description, gps, hasThumbnail);
     }
 
+    /**
+     * Extrait les métadonnées EXIF d'un fichier image et crée une instance d'ExifMetadata.
+     *
+     * <p>Cette méthode utilise la bibliothèque "Metadata Extractor" pour analyser les métadonnées
+     * du fichier image et récupérer des informations telles que les dimensions, la résolution,
+     * le titre, la description, les coordonnées GPS, et la présence d'une miniature.</p>
+     *
+     * @param imageFile le fichier image à analyser
+     * @return une instance d'ExifMetadata contenant les métadonnées extraites, ou {@code null} en cas d'échec
+     * @throws IOException si le fichier est introuvable ou illisible
+     * @throws IllegalArgumentException si le fichier est nul
+     * 
+     * @see <a href="https://github.com/drewnoakes/metadata-extractor">Metadata Extractor Documentation</a>
+     * @see ExifMetadata
+     */
     public static ExifMetadata extract(File imageFile) throws IOException {
         // Vérification de la validité du fichier
         if (imageFile == null) {
@@ -90,21 +128,13 @@ public class ExifMetadata extends ImageMetadata {
                 }
             }
 
-            // Check for thumbnail using ExifThumbnailDirectory
             hasThumbnail = metadata.getFirstDirectoryOfType(ExifThumbnailDirectory.class) != null;
-            
-//            ExifThumbnailDirectory thumbnailDirectory = metadata.getFirstDirectoryOfType(ExifThumbnailDirectory.class);
-//            if (thumbnailDirectory != null) {                  
-//                thumbnailData = thumbnailDirectory.getByteArray(ExifThumbnailDirectory.TAG_THUMBNAIL_IMAGE);
-//                hasThumbnail = thumbnailData != null;
-//            }
             
             return new ExifMetadata(width, height, dpi, title, description, gps, hasThumbnail);
         } catch (ImageProcessingException | IOException | MetadataException e) {
             e.printStackTrace();
         }
 
-        // Retourner une nouvelle instance d'ExifMetadata (qui est une sous-classe de ImageMetadata)
         return null;
     }
 }
