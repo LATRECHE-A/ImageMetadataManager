@@ -2,18 +2,43 @@ package test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.File;
 import java.io.IOException;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 
+/**
+ * Cette classe fournit une interface en ligne de commande pour interagir avec des fichiers image.
+ * Elle permet de réaliser des opérations telles que la recherche de fichiers, l'affichage d'informations,
+ * la gestion de répertoires et de snapshots, ainsi que la récupération des métadonnées des fichiers image.
+ * 
+ * Les options disponibles sont les suivantes :
+ * <ul>
+ *     <li>Liste les fichiers d'un répertoire.</li>
+ *     <li>Affiche des statistiques sur un répertoire ou un fichier.</li>
+ *     <li>Sauvegarde l'état d'un répertoire (snapshot).</li>
+ *     <li>Compare l'état actuel d'un répertoire avec un snapshot sauvegardé.</li>
+ *     <li>Recherche des fichiers image dans un répertoire selon des critères (nom, date, dimensions).</li>
+ * </ul>
+ * @author DIALLO
+ * @version 1.0
+ */
 public class ConsoleInterface {
 
+	/**
+     * Point d'entrée principal de l'application en ligne de commande.
+     * Selon les arguments fournis, cette méthode sélectionne l'option à exécuter.
+     * 
+     * @param args Les arguments passés en ligne de commande.
+     */
     public static void start(String[] args) {
         if (args.length == 0 || args[0].equals("-h") || args[0].equals("--help")) {
             printHelp();
@@ -47,6 +72,12 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+     * Gère le mode de recherche dans un répertoire selon des critères spécifiques (nom, date, dimensions).
+     * 
+     * @param args Les arguments en ligne de commande, dont le répertoire et les critères de recherche.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de la recherche.
+     */
     private static void handleSearchMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Utilisation : --search <directory> <criteria>");
@@ -65,6 +96,9 @@ public class ConsoleInterface {
 
         String[] criteria = java.util.Arrays.copyOfRange(args, 2, args.length);
         StringBuilder commandBuilder = new StringBuilder();
+        boolean searchByDimensions = false;
+        int targetWidth = 0, targetHeight = 0;
+        
         // Detecting the OS
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("win")) {
@@ -94,23 +128,17 @@ public class ConsoleInterface {
                     return;
                 }
             } else if (criterion.startsWith("dimensions=")) {
+            	
+            	searchByDimensions = true;
                 String dimensions = criterion.substring(11);
                 String[] parts = dimensions.split("x");
                 if (parts.length != 2) {
                     System.out.println("Format des dimensions invalide. Utilisez <largeur>x<hauteur>.");
                     return;
                 }
-
                 try {
-                    int width = Integer.parseInt(parts[0]);
-                    int height = Integer.parseInt(parts[1]);
-                    if (os.contains("win")) {
-                        System.out.println("La vérification des dimensions sur Windows n'est pas implémentée.");
-                        return;
-                    } else {
-                        commandBuilder.append(" -exec identify -format '%w %h %i\\n' {} + | awk '$1 >= ")
-                            .append(width).append(" && $2 >= ").append(height).append(" {print $3}'");
-                    }
+                    targetWidth = Integer.parseInt(parts[0]);
+                    targetHeight = Integer.parseInt(parts[1]);
                 } catch (NumberFormatException e) {
                     System.out.println("Dimensions invalides : " + dimensions);
                     return;
@@ -120,10 +148,48 @@ public class ConsoleInterface {
                 return;
             }
         }
+        
+     // Parcourir les fichiers dans le répertoire
+        File dir = directory.toFile();
+        File[] files = dir.listFiles((d, name) ->
+            name.toLowerCase().endsWith(".png") ||
+            name.toLowerCase().endsWith(".jpg") ||
+            name.toLowerCase().endsWith(".jpeg") ||
+            name.toLowerCase().endsWith(".webp")
+        );
+
+        if (files == null || files.length == 0) {
+            System.out.println("Aucun fichier image trouvé dans le répertoire.");
+            return;
+        }
+
+        // Vérification des dimensions
+        if (searchByDimensions) {
+            System.out.println(">>> Début de la vérification des dimensions <<<");
+            List<String> matchingFiles = new ArrayList<>();
+            for (File file : files) {
+                try {
+                    BufferedImage image = ImageIO.read(file);
+                    if (image != null && image.getWidth() == targetWidth && image.getHeight() == targetHeight) {
+                        matchingFiles.add(file.getAbsolutePath());
+                    }
+                } catch (IOException e) {
+                    System.out.println("Erreur lors de la lecture de l'image : " + file.getName());
+                }
+            }
+            if (!matchingFiles.isEmpty()) {
+                System.out.println("Fichiers correspondant aux dimensions spécifiées :");
+                matchingFiles.forEach(System.out::println);
+            } else {
+                System.out.println("Aucun fichier ne correspond aux dimensions spécifiées.");
+            }
+            System.out.println(">>> Fin des fichiers correspondant <<<");
+            return;
+        }
 
         // Execute the command
         String command = commandBuilder.toString();
-        System.out.println("Exécution de la commande : " + command);
+        //System.out.println("Exécution de la commande : " + command);
 
         ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
         if (os.contains("win")) {
@@ -146,9 +212,15 @@ public class ConsoleInterface {
         } catch (IOException e) {
             System.out.println("Erreur lors de l'exécution de la commande : " + e.getMessage());
         }
-
+        
     }
 
+    /**
+     * Gère le mode répertoire, qui permet de lister les fichiers, afficher des statistiques et comparer avec un snapshot.
+     * 
+     * @param args Les arguments en ligne de commande, dont le répertoire et l'option de mode répertoire.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de l'exécution.
+     */
     private static void handleDirectoryMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Spécifiez le dossier et l'option souhaitée (-list, --stat, --compare-snapshot).");
@@ -215,7 +287,7 @@ public class ConsoleInterface {
 
                 System.out.println("Extensions de fichiers trouvées : " + String.join(", ", analyzer.getFileExtensions()));
                 System.out.println("Nombre de fichiers vides : " + analyzer.getEmptyFileCount());
-                System.out.println("Taille totale (y compris sous-dossiers) : " + analyzer.getTotalDirectorySize() + " octets");
+                System.out.println("Taille totale (y compris sous-dossiers) : " + analyzer.getTotalFileSize() + " octets");
                 break;
             case "--compare-snapshot":
                 handleCompareSnapshotMode(args, directory);
@@ -226,6 +298,12 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+    * Gère le mode fichier, qui permet d'afficher des statistiques ou des métadonnées d'un fichier image spécifique.
+    * 
+    * @param args Les arguments en ligne de commande, dont le chemin du fichier et l'option du mode fichier.
+    * @throws IOException Si une erreur d'entrée/sortie se produit lors de l'exécution.
+    */
     private static void handleFileMode(String[] args) throws IOException {
         if (args.length < 3) {
             System.out.println("Spécifiez le fichier et l'option souhaitée (--stat ,-i ,--info).");
@@ -283,6 +361,12 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+     * Capture l'état actuel d'un répertoire, en sauvegardant un snapshot des fichiers présents.
+     * 
+     * @param args Les arguments en ligne de commande, spécifiant le répertoire à capturer.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de la sauvegarde du snapshot.
+     */
     private static void handleSnapshotMode(String[] args) throws IOException {
         if (args.length < 2) {
             System.out.println("Spécifiez le dossier à capturer.");
@@ -303,6 +387,13 @@ public class ConsoleInterface {
         System.out.println("Snapshot enregistré pour le dossier : " + directory.getFileName());
     }
 
+    /**
+     * Compare l'état actuel d'un répertoire avec un snapshot sauvegardé, en affichant les fichiers ajoutés, modifiés ou supprimés.
+     * 
+     * @param args Les arguments en ligne de commande, dont le répertoire à comparer avec un snapshot.
+     * @param directory Le répertoire à analyser.
+     * @throws IOException Si une erreur d'entrée/sortie se produit lors de la comparaison des snapshots.
+     */
     private static void handleCompareSnapshotMode(String[] args, Path directory) throws IOException {
         DirectoryAnalyzer analyzer = new DirectoryAnalyzer(directory);
         List<ImageFile> currentImageFiles = analyzer.listImageFiles();
@@ -316,7 +407,7 @@ public class ConsoleInterface {
         }
 
         // Print deleted files
-        List<Path> deletedFiles = categorizedFiles.getOrDefault("Deleted", Collections.emptyList());
+        List<Path> deletedFiles = categorizedFiles.get("Supprime");
         if (!deletedFiles.isEmpty()) {
             System.out.println("Photos supprimées :");
             deletedFiles.forEach(file -> System.out.println(file));
@@ -325,7 +416,7 @@ public class ConsoleInterface {
         }
 
         // Print modified files
-        List<Path> modifiedFiles = categorizedFiles.getOrDefault("Modified", Collections.emptyList());
+        List<Path> modifiedFiles = categorizedFiles.get("Modifie");
         if (!modifiedFiles.isEmpty()) {
             System.out.println("Photos modifiées :");
             modifiedFiles.forEach(file -> System.out.println(file));
@@ -334,7 +425,7 @@ public class ConsoleInterface {
         }
 
         // Print new files
-        List<Path> newFiles = categorizedFiles.getOrDefault("New", Collections.emptyList());
+        List<Path> newFiles = categorizedFiles.get("Nouveau");
         if (!newFiles.isEmpty()) {
             System.out.println("Photos nouvelles :");
             newFiles.forEach(file -> System.out.println(file));
@@ -343,6 +434,10 @@ public class ConsoleInterface {
         }
     }
 
+    /**
+     * Affiche l'aide de l'application en ligne de commande.
+     * Cette méthode présente les options disponibles et leur utilisation.
+     */
     private static void printHelp() {
         System.out.println("Usage : java -jar ImageMetadataManager.jar cli <options>");
         System.out.println("-d(, --directory) <directory> --list : Liste les fichiers images du dossier");

@@ -14,12 +14,32 @@ import java.nio.file.attribute.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.BasicFileAttributes;
 
-
+/**
+ * SnapshotManager gère les snapshots d'un répertoire cible en permettant de créer, comparer, 
+ * et vérifier l'intégrité des snapshots de fichiers. Cette classe prend également en charge 
+ * les permissions sécurisées des fichiers, tant pour les systèmes POSIX (Linux, macOS) que pour 
+ * les systèmes Windows.
+ * Elle offre plusieurs fonctionnalités :
+ *   Sauvegarder un snapshot de fichiers d'images.
+ *   Comparer l'état actuel des fichiers avec un snapshot précédent (nouveaux, modifiés, supprimés). 
+ * Cette classe crée et manipule des répertoires de snapshots et de métadonnées associés.
+ * 
+ * @author LATRECHE
+ * @version 1.0
+ */
 public class SnapshotManager {
     private final Path snapshotDirectory;
     private final Path snapshotMetadataDirectory;
     private final boolean isPosix;
 
+    /**
+     * Constructeur pour SnapshotManager.
+     *
+     * <p>Initialise les répertoires pour les snapshots et leurs métadonnées, et définit des autorisations
+     * restrictives pour garantir la sécurité.</p>
+     *
+     * @param targetDirectory Répertoire cible pour lequel les snapshots seront gérés.
+     */
     public SnapshotManager(Path targetDirectory) {
         this.snapshotDirectory = Paths.get("snapshots");
         this.snapshotMetadataDirectory = Paths.get("snapshot_metadata");
@@ -134,6 +154,16 @@ public class SnapshotManager {
         }
     }
 
+    /**
+     * Enregistre un snapshot pour une liste de fichiers.
+     *
+     * <p>Cette méthode crée un fichier snapshot et un fichier de métadonnées associé, tout en
+     * supprimant les anciens snapshots pour éviter l'accumulation. Elle applique également des
+     * autorisations restrictives sur les fichiers générés.</p>
+     *
+     * @param files Liste des fichiers à inclure dans le snapshot.
+     * @throws IOException Si une erreur d'entrée/sortie survient.
+     */
     public void saveSnapshot(List<ImageFile> files) throws IOException {
         // Format the current date and time
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
@@ -178,7 +208,16 @@ public class SnapshotManager {
         setFileRestrictivePermissions(metadataFile);
     }
 
-
+    /**
+     * Compare les snapshots actuels avec le snapshot le plus récent.
+     *
+     * <p>Identifie les fichiers nouveaux, modifiés ou supprimés en comparant les tailles des fichiers
+     * entre l'état actuel et le dernier snapshot.</p>
+     *
+     * @param currentFiles Liste des fichiers actuellement présents.
+     * @return Une map catégorisant les fichiers en "Nouveau", "Modifié" et "Supprimé".
+     * @throws IOException Si une erreur d'entrée/sortie survient.
+     */
     public Map<String, List<Path>> compareSnapshots(List<ImageFile> currentFiles) throws IOException {
         Map<String, Long> previousSnapshot = loadMostRecentSnapshot();
 
@@ -201,29 +240,48 @@ public class SnapshotManager {
         Set<String> allFilePaths = new HashSet<>(previousSnapshot.keySet());
         allFilePaths.addAll(currentSnapshot.keySet());
 
+        // Conserver une trace des fichiers déjà catégorisés comme modifiés
+        Set<String> processedCurrentFiles = new HashSet<>();
+
         for (String filePath : allFilePaths) {
             Long previousSize = previousSnapshot.get(filePath);
             Long currentSize = currentSnapshot.get(filePath);
 
-            // File is new (exists in current snapshot, not in previous)
+            // Fichier nouveau (existe dans le snapshot actuel mais pas dans le précédent)
             if (previousSize == null && currentSize != null) {
-                newFiles.add(Paths.get(filePath));
-            }
-            // File is deleted (exists in previous snapshot, not in current)
+                // Vérifier si ce fichier a déjà été catégorisé comme renommé (modifié)
+                if (!processedCurrentFiles.contains(filePath)) {
+                    newFiles.add(Paths.get(filePath));
+                }
+            } 
+            // Fichier supprimé (existe dans le snapshot précédent mais pas dans l'actuel)
             else if (previousSize != null && currentSize == null) {
-                deletedFiles.add(Paths.get(filePath));
-            }
-            // File is modified (size has changed)
+                // Vérifier si le fichier existe avec un nouveau nom
+                boolean isRenamed = false;
+                for (Map.Entry<String, Long> entry : currentSnapshot.entrySet()) {
+                    if (entry.getValue().equals(previousSize) && !entry.getKey().equals(filePath)) {
+                        isRenamed = true;
+                        modifiedFiles.add(Paths.get(entry.getKey())); // Ajouter le nouveau nom dans les fichiers modifiés
+                        processedCurrentFiles.add(entry.getKey());   // Marquer comme traité
+                        break;
+                    }
+                }
+                if (!isRenamed) {
+                    deletedFiles.add(Paths.get(filePath)); // Sinon, marquer comme supprimé
+                }
+            } 
+            // Fichier modifié (la taille a changé)
             else if (!previousSize.equals(currentSize)) {
                 modifiedFiles.add(Paths.get(filePath));
+                processedCurrentFiles.add(filePath); // Marquer comme traité
             }
         }
 
         // Return the categorized lists
         Map<String, List<Path>> categorizedFiles = new HashMap<>();
         categorizedFiles.put("Nouveau", newFiles);
-        categorizedFiles.put("Modifié", modifiedFiles);
-        categorizedFiles.put("Supprimé", deletedFiles);
+        categorizedFiles.put("Modifie", modifiedFiles);
+        categorizedFiles.put("Supprime", deletedFiles);
 
         return categorizedFiles;
     }

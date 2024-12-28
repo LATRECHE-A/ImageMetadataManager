@@ -6,78 +6,52 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
+import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.ExifThumbnailDirectory;
 import com.drew.metadata.exif.GpsDirectory;
 
+/**
+ * La classe MetadataExtractor fournit une méthode pour extraire les métadonnées
+ * d'un fichier image, en retournant une instance de {@link ImageMetadata} ou
+ * une de ses sous-classes ({@link ExifMetadata} ou {@link XmpMetadata}).
+ *
+ * Cette classe s'appuie sur la bibliothèque "Metadata Extractor" pour analyser
+ * différents types de métadonnées, y compris les métadonnées EXIF et XMP.
+ * 
+ * @author DIALLO
+ * @version 1.0
+ */
 public class MetadataExtractor {
-    public static ImageMetadata extract(File imageFile) throws IOException {
-        if (imageFile == null) {
+	/**
+	 * Extrait les métadonnées d'un fichier image. Si les métadonnées EXIF ne sont pas disponibles,
+     * cette méthode tente d'extraire les métadonnées XMP.
+     *
+     * @param imageFile le fichier image dont les métadonnées doivent être extraites
+     * @return une instance de {@link ImageMetadata} représentant les métadonnées extraites, 
+     *         ou {@code null} si aucune métadonnée n'a pu être extraite
+     * @throws IOException si le fichier est introuvable ou illisible
+     * @throws IllegalArgumentException si le fichier fourni est {@code null}
+	 */
+	public static ImageMetadata extract(File imageFile) throws IOException {
+		if (imageFile == null) {
             throw new IllegalArgumentException("Image file cannot be null");
         }
-        
-        if (!imageFile.exists()) {
-            throw new IOException("Image file does not exist: " + imageFile.getPath());
-        }
 
-        try {
-            Metadata metadata = ImageMetadataReader.readMetadata(imageFile);
-            ExifIFD0Directory exifDirectory = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
-            
-            // Default values in case metadata is not available
-            int width = 0;
-            int height = 0;
-            int dpi = 0;
-            String title = null;
-            String description = null;
-            String gps = "N/A";
-            
-            if (exifDirectory != null) {
-                // Get dimensions if available
-                if (exifDirectory.containsTag(ExifIFD0Directory.TAG_IMAGE_WIDTH)) {
-                    width = exifDirectory.getInt(ExifIFD0Directory.TAG_IMAGE_WIDTH);
-                }
-                if (exifDirectory.containsTag(ExifIFD0Directory.TAG_IMAGE_HEIGHT)) {
-                    height = exifDirectory.getInt(ExifIFD0Directory.TAG_IMAGE_HEIGHT);
-                }
-                
-                // Get DPI if available
-                if (exifDirectory.containsTag(ExifIFD0Directory.TAG_X_RESOLUTION)) {
-                    dpi = exifDirectory.getInt(ExifIFD0Directory.TAG_X_RESOLUTION);
-                }
-                
-                // Get title and description if available
-                title = exifDirectory.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION);
-                description = exifDirectory.getString(ExifIFD0Directory.TAG_DOCUMENT_NAME);
-            }
-            
-            // Handle GPS data
-            GpsDirectory gpsDirectory = metadata.getFirstDirectoryOfType(GpsDirectory.class);
-            if (gpsDirectory != null) {
-                StringBuilder gpsBuilder = new StringBuilder();
-                
-                // Using the correct GPS tag constants
-                if (gpsDirectory.containsTag(GpsDirectory.TAG_LATITUDE) && 
-                    gpsDirectory.containsTag(GpsDirectory.TAG_LONGITUDE)) {
-                    
-                    String latitude = gpsDirectory.getDescription(GpsDirectory.TAG_LATITUDE);
-                    String longitude = gpsDirectory.getDescription(GpsDirectory.TAG_LONGITUDE);
-                    
-                    if (latitude != null && longitude != null) {
-                        gpsBuilder.append(latitude).append(", ").append(longitude);
-                        gps = gpsBuilder.toString();
-                    }
-                }
+        if (imageFile.exists()) {
+            // Essayez d'extraire les métadonnées EXIF
+            ExifMetadata exifMetadata = ExifMetadata.extract(imageFile);
+            if (exifMetadata != null) {
+            	System.out.println("Affichage des metadata exif");
+                return exifMetadata;
             }
 
-            // Check for thumbnail using ExifThumbnailDirectory
-            boolean hasThumbnail = metadata.getFirstDirectoryOfType(ExifThumbnailDirectory.class) != null;
-            
-            return new ImageMetadata(width, height, dpi, title, description, gps, hasThumbnail);
-            
-        } catch (ImageProcessingException e) {
-            throw new IOException("Failed to process image metadata: " + e.getMessage(), e);
-        } catch (Exception e) {
-            throw new IOException("Unexpected error while extracting metadata: " + e.getMessage(), e);
+            XmpMetadata xmpMetadata = XmpMetadata.extractXmpMetadata(imageFile);
+            if (xmpMetadata != null) {
+            	System.out.println("Affichage des metadata xmp");
+                return xmpMetadata;
+            }
         }
+
+        return null; 
     }
 }
