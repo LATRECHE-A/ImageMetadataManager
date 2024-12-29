@@ -407,7 +407,7 @@ public class ConsoleInterface {
         }
 
         // Print deleted files
-        List<Path> deletedFiles = categorizedFiles.get("Deleted");
+        List<Path> deletedFiles = categorizedFiles.get("Supprime");
         if (!deletedFiles.isEmpty()) {
             System.out.println("Photos supprimées :");
             deletedFiles.forEach(file -> System.out.println(file));
@@ -416,7 +416,7 @@ public class ConsoleInterface {
         }
 
         // Print modified files
-        List<Path> modifiedFiles = categorizedFiles.get("Modified");
+        List<Path> modifiedFiles = categorizedFiles.get("Modifie");
         if (!modifiedFiles.isEmpty()) {
             System.out.println("Photos modifiées :");
             modifiedFiles.forEach(file -> System.out.println(file));
@@ -425,7 +425,7 @@ public class ConsoleInterface {
         }
 
         // Print new files
-        List<Path> newFiles = categorizedFiles.get("New");
+        List<Path> newFiles = categorizedFiles.get("Nouveau");
         if (!newFiles.isEmpty()) {
             System.out.println("Photos nouvelles :");
             newFiles.forEach(file -> System.out.println(file));

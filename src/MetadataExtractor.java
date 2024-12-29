@@ -41,13 +41,11 @@ public class MetadataExtractor {
             // Essayez d'extraire les métadonnées EXIF
             ExifMetadata exifMetadata = ExifMetadata.extract(imageFile);
             if (exifMetadata != null) {
-            	System.out.println("Affichage des metadata exif");
                 return exifMetadata;
             }
 
             XmpMetadata xmpMetadata = XmpMetadata.extractXmpMetadata(imageFile);
             if (xmpMetadata != null) {
-            	System.out.println("Affichage des metadata xmp");
                 return xmpMetadata;
             }
         }

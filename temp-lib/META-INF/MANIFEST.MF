@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1605616735377
+Build-Jdk-Spec: 1.8
+Bundle-Description: The Adobe XMP Core library
+Bundle-License: https://opensource.org/licenses/BSD-3-Clause
+Bundle-ManifestVersion: 2
+Bundle-Name: Adobe XMPCore
+Bundle-SymbolicName: com.adobe.xmp.xmpcore
+Bundle-Vendor: Adobe Systems Incorporated
+Bundle-Version: 6.1.11
+Created-By: Apache Maven Bundle Plugin
+Export-Package: com.adobe.internal.xmp;uses:="com.adobe.internal.xmp.o
+ ptions,com.adobe.internal.xmp.properties";version="6.1.11",com.adobe.
+ internal.xmp.options;uses:="com.adobe.internal.xmp";version="6.1.11",
+ com.adobe.internal.xmp.properties;uses:="com.adobe.internal.xmp.optio
+ ns";version="6.1.11",com.adobe.internal.xmp.utils;uses:="com.adobe.in
+ ternal.xmp.options";version="6.1.11",com.adobe.xmp.core.map;version="
+ 6.1.11"
+Import-Package: javax.xml.parsers,org.w3c.dom,org.xml.sax
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=1.6))"
+Tool: Bnd-5.1.1.202006162103
+

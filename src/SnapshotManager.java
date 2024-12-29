@@ -240,29 +240,48 @@ public class SnapshotManager {
         Set<String> allFilePaths = new HashSet<>(previousSnapshot.keySet());
         allFilePaths.addAll(currentSnapshot.keySet());
 
+        // Conserver une trace des fichiers déjà catégorisés comme modifiés
+        Set<String> processedCurrentFiles = new HashSet<>();
+
         for (String filePath : allFilePaths) {
             Long previousSize = previousSnapshot.get(filePath);
             Long currentSize = currentSnapshot.get(filePath);
 
-            // File is new (exists in current snapshot, not in previous)
+            // Fichier nouveau (existe dans le snapshot actuel mais pas dans le précédent)
             if (previousSize == null && currentSize != null) {
-                newFiles.add(Paths.get(filePath));
-            }
-            // File is deleted (exists in previous snapshot, not in current)
+                // Vérifier si ce fichier a déjà été catégorisé comme renommé (modifié)
+                if (!processedCurrentFiles.contains(filePath)) {
+                    newFiles.add(Paths.get(filePath));
+                }
+            } 
+            // Fichier supprimé (existe dans le snapshot précédent mais pas dans l'actuel)
             else if (previousSize != null && currentSize == null) {
-                deletedFiles.add(Paths.get(filePath));
-            }
-            // File is modified (size has changed)
+                // Vérifier si le fichier existe avec un nouveau nom
+                boolean isRenamed = false;
+                for (Map.Entry<String, Long> entry : currentSnapshot.entrySet()) {
+                    if (entry.getValue().equals(previousSize) && !entry.getKey().equals(filePath)) {
+                        isRenamed = true;
+                        modifiedFiles.add(Paths.get(entry.getKey())); // Ajouter le nouveau nom dans les fichiers modifiés
+                        processedCurrentFiles.add(entry.getKey());   // Marquer comme traité
+                        break;
+                    }
+                }
+                if (!isRenamed) {
+                    deletedFiles.add(Paths.get(filePath)); // Sinon, marquer comme supprimé
+                }
+            } 
+            // Fichier modifié (la taille a changé)
             else if (!previousSize.equals(currentSize)) {
                 modifiedFiles.add(Paths.get(filePath));
+                processedCurrentFiles.add(filePath); // Marquer comme traité
             }
         }
 
         // Return the categorized lists
         Map<String, List<Path>> categorizedFiles = new HashMap<>();
         categorizedFiles.put("Nouveau", newFiles);
-        categorizedFiles.put("Modifié", modifiedFiles);
-        categorizedFiles.put("Supprimé", deletedFiles);
+        categorizedFiles.put("Modifie", modifiedFiles);
+        categorizedFiles.put("Supprime", deletedFiles);
 
         return categorizedFiles;
     }

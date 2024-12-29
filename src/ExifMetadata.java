@@ -10,6 +10,9 @@ import com.drew.metadata.MetadataException;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.lang.GeoLocation;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -89,21 +92,31 @@ public class ExifMetadata extends ImageMetadata {
                     dpi = exifDirectory.getInt(ExifIFD0Directory.TAG_X_RESOLUTION);
                 }
                 
+                if (exifDirectory.containsTag(ExifIFD0Directory.TAG_IMAGE_WIDTH)) {
+                    width = exifDirectory.getInt(ExifIFD0Directory.TAG_IMAGE_WIDTH);
+                    //System.out.println("Width: " + width);
+                }
+
+                if (exifDirectory.containsTag(ExifIFD0Directory.TAG_IMAGE_HEIGHT)) {
+                    height = exifDirectory.getInt(ExifIFD0Directory.TAG_IMAGE_HEIGHT);
+                    //System.out.println("Height: " + height);
+                }
+                
                 // Get title and description if available
-                title = exifDirectory.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION);
-                description = exifDirectory.getString(ExifIFD0Directory.TAG_DOCUMENT_NAME);
+                title = exifDirectory.getString(ExifIFD0Directory.TAG_DOCUMENT_NAME);
+                description = exifDirectory.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION);
             }
             
             ExifSubIFDDirectory subIFDDirectory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
             if (subIFDDirectory != null) {
                 if (subIFDDirectory.containsTag(ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH)) {
                     width = subIFDDirectory.getInt(ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH);
-                    System.out.println("Width (from SubIFD): " + width);
+                    //System.out.println("Width (from SubIFD): " + width);
                 }
 
                 if (subIFDDirectory.containsTag(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT)) {
                     height = subIFDDirectory.getInt(ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT);
-                    System.out.println("Height (from SubIFD): " + height);
+                    //System.out.println("Height (from SubIFD): " + height);
                 }
             } else {
                 System.out.println("No ExifSubIFDDirectory found in EXIF data!");
@@ -130,9 +143,26 @@ public class ExifMetadata extends ImageMetadata {
 
             hasThumbnail = metadata.getFirstDirectoryOfType(ExifThumbnailDirectory.class) != null;
             
+            if (width == 0 || height == 0) {
+                try {
+                    BufferedImage bufferedImage = ImageIO.read(imageFile);
+                    if (bufferedImage != null) {
+                        width = bufferedImage.getWidth();
+                        height = bufferedImage.getHeight();
+                        //System.out.println("Dimensions récupérées avec ImageIO : " + width + "x" + height);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Erreur lors de la lecture des dimensions avec ImageIO : " + e.getMessage());
+                }
+            }
+            
             return new ExifMetadata(width, height, dpi, title, description, gps, hasThumbnail);
-        } catch (ImageProcessingException | IOException | MetadataException e) {
+        } catch (ImageProcessingException e) {
             e.printStackTrace();
+        }catch (MetadataException e) {
+        	e.printStackTrace();
+        }catch (IOException e) {
+        	e.printStackTrace();
         }
 
         return null;

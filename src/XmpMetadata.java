@@ -7,10 +7,18 @@ import com.drew.metadata.xmp.XmpDirectory;
 import com.drew.metadata.Tag;
 import com.drew.metadata.MetadataException;
 import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Directory;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 
 /**
@@ -54,24 +62,39 @@ public class XmpMetadata extends ImageMetadata{
     public static XmpMetadata extractXmpMetadata(File imageFile) throws IOException {
         String title = "N/A"; 
         String description = "N/A";
+        int width = 0;
+        int height = 0;
         
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(imageFile);
             XmpDirectory xmpDirectory = metadata.getFirstDirectoryOfType(XmpDirectory.class);
             
-            if (xmpDirectory != null) {
-                for (Tag tag : xmpDirectory.getTags()) {
-                    if ("Title".equals(tag.getTagName())) {
-                        title = tag.getDescription();
+            for (Directory directory : metadata.getDirectories()) {
+                for (Tag tag : directory.getTags()) {
+                    String tagName = tag.getTagName();
+                    String value = tag.getDescription();
+
+                    if ("XP Title".equals(tagName) || "Title".equals(tagName)) {
+                        title = value;
                     }
-                    if ("Description".equals(tag.getTagName())) {
-                        description = tag.getDescription();
+                    if ("Description".equals(tagName) || "Image Description".equals(tagName)) {
+                        description = value;
                     }
                 }
             }
-
-            int width = 0;
-            int height = 0;
+            
+            if (width == 0 || height == 0) {
+                try {
+                    BufferedImage bufferedImage = ImageIO.read(imageFile);
+                    if (bufferedImage != null) {
+                        width = bufferedImage.getWidth();
+                        height = bufferedImage.getHeight();
+                    }
+                } catch (IOException e) {
+                    System.err.println("Erreur lors de la lecture des dimensions avec ImageIO : " + e.getMessage());
+                }
+            }
+            
             int dpi = 0;
             String gps = "N/A";
             boolean hasThumbnail = false;
