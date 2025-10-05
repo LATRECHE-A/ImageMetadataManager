@@ -2227,3 +2227,5 @@
 [2025-10-05 17:41:34.875] [DEBUG] [DirectoryAnalyzer.<init>:45] Created DirectoryAnalyzer for: {}
 [2025-10-05 17:41:34.892] [DEBUG] [DirectoryAnalyzer.<init>:45] Created DirectoryAnalyzer for: {}
 [2025-10-05 17:41:34.904] [DEBUG] [DirectoryAnalyzer.<init>:45] Created DirectoryAnalyzer for: {}
+[2025-10-05 20:10:09.176] [INFO] [Main.main:39] Starting GUI mode
+[2025-10-05 20:10:09.352] [INFO] [Localization.initialize:58] Detected system language: {}

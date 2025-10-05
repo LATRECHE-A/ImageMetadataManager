@@ -18,12 +18,24 @@ JAVAC_FLAGS = --release $(JAVA_VERSION) -Xlint:all -Xlint:-this-escape
 CLASSPATH = $(BIN_DIR):$(LIB_DIR)/*
 TEST_CLASSPATH = $(TEST_BIN_DIR):$(BIN_DIR):$(LIB_DIR)/*:lib/junit-platform-console-standalone-1.10.1.jar
 
+# OS Detection for Arch Linux Java AWT fix
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    # Check if running on Arch Linux
+    IS_ARCH := $(shell [ -f /etc/arch-release ] && echo 1 || echo 0)
+    ifeq ($(IS_ARCH),1)
+        JAVA_ENV := _JAVA_AWT_WM_NONREPARENTING=1
+    endif
+endif
+
 # Source files
 JAVA_SOURCES = $(shell find $(SRC_DIR) -name "*.java")
 TEST_SOURCES = $(shell find $(TEST_DIR) -name "*.java" 2>/dev/null)
 
 all: build
+
 release: clean package
+
 everything: clean package docs
 
 help:
@@ -85,11 +97,11 @@ package-no-test: build
 
 run-gui: build
 	@echo "🚀 Launching GUI..."
-	@_JAVA_AWT_WM_NONREPARENTING=1 java -cp "$(CLASSPATH)" $(MAIN_CLASS) --gui
+	@$(JAVA_ENV) java -cp "$(CLASSPATH)" $(MAIN_CLASS) --gui
 
 run-cli: build
 	@echo "🚀 Launching CLI..."
-	@java -cp "$(CLASSPATH)" $(MAIN_CLASS) --cli --help
+	@$(JAVA_ENV) java -cp "$(CLASSPATH)" $(MAIN_CLASS) --cli --help
 
 docs:
 	@echo "📚 Generating docs..."
